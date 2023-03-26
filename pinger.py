@@ -7,6 +7,7 @@ import select
 import binascii
 import pandas as pd
 import warnings
+import statistics
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -128,11 +129,11 @@ def ping(host, timeout=1):
     response = pd.DataFrame(columns=['bytes', 'rtt', 'ttl'])  # This creates an empty dataframe with 3 headers with the column specific names declared
 
     # Send ping requests to a server separated by approximately one second
-    # Add something here to collect the delays of each ping in a list so you can calculate vars after your ping
+    # Add something here to collect the delays of each ping in a list, so you can calculate vars after your ping
     delays = []
     for i in range(0, 4):  # Four pings will be sent (loop runs for i=0, 1, 2, 3)
         delay, statistics = doOnePing(dest, timeout)  # what is stored into delay and statistics?
-        response =  response.append({'bytes': len(statistics), 'rtt': delay, 'ttl': statistics[2]}, ignore_index=True)# store your bytes, rtt, and ttle here in your response pandas dataframe. An example is commented out below for vars
+        response = response.append({'bytes': len(statistics), 'rtt': delay, 'ttl': statistics[2]}, ignore_index=True)# store your bytes, rtt, and ttle here in your response pandas dataframe. An example is commented out below for vars
         print(delay)
         time.sleep(1)  # wait one second
 
@@ -140,7 +141,7 @@ def ping(host, timeout=1):
     packet_recv = 0
     # fill in start. UPDATE THE QUESTION MARKS
     for index, row in response.iterrows(): # Looping through each row in response df
-        if row[0] == 0:  # access your response df to determine if you received a packet or not
+        if row['bytes'] == 0:  # access your response df to determine if you received a packet or not
             packet_lost += 1
         else:
             packet_recv += 1
@@ -151,7 +152,7 @@ def ping(host, timeout=1):
     packet_min = min(delays)
     packet_avg = sum(delays)/4
     packet_max = max(delays)
-    stddev = round(statistics.stdev(delays))
+    stddev = statistics.stdev(delays)
     vars = pd.DataFrame(columns=['min', 'avg', 'max', 'stddev'])
     # vars = vars.append({'min': str(round(response['rtt'].min(), 2)), 'avg': str(round(response['rtt'].mean(), 2)),
                        # 'max': str(round(response['rtt'].max(), 2)), 'stddev': str(round(response['rtt'].std(), 2))},
