@@ -47,7 +47,7 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
         if whatReady[0] == []:  # Timeout
             return "Request timed out."
 
-        timeReceived = time.time()  # Curent time recorded if socket ready.
+        timeReceived = time.time()  # Current time recorded if socket ready.
         recPacket, addr = mySocket.recvfrom(1024)
 
         # Fill in start
@@ -63,8 +63,8 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
 
         if ID_Num == ID:
             SizeInDouble = struct.calcsize("d")  # Calculating size of packed double precision floating pt. no.
-            Extract_Timestamp = recPacket[28:28 + SizeInDouble]  # Timestamp value follows ICMP header, starts at 28 up to "d" calculated in Line 61.If d = 8, extracted from [28:36]
-            TimestampInPayload, = struct.unpack("d", Extract_Timestamp)  # struct.unpack returns tuple, retrieving only first value.
+            Extract_Timestamp = (recPacket[28:28 + SizeInDouble])  # Timestamp value follows ICMP header, starts at 28 up to "d" calculated in Line 61.If d = 8, extracted from [28:36]
+            TimestampInPayload = struct.unpack("d", Extract_Timestamp)[0]  # struct.unpack returns tuple, retrieving only first value.
             RTT = timeReceived - TimestampInPayload
             return RTT
         # Fill in end
