@@ -7,9 +7,11 @@ import select
 import binascii
 import pandas as pd
 import warnings
+
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 ICMP_ECHO_REQUEST = 8
+
 
 def checksum(string):
     csum = 0
@@ -33,17 +35,18 @@ def checksum(string):
     answer = answer >> 8 | (answer << 8 & 0xff00)
     return answer
 
+
 def receiveOnePing(mySocket, ID, timeout, destAddr):
     timeLeft = timeout
 
     while 1:
-        startedSelect = time.time() #Current time in sec.
+        startedSelect = time.time()  # Current time in sec.
         whatReady = select.select([mySocket], [], [], timeLeft)
         howLongInSelect = (time.time() - startedSelect)
         if whatReady[0] == []:  # Timeout
             return "Request timed out."
 
-        timeReceived = time.time() #Curent time recorded if socket ready.
+        timeReceived = time.time()  # Curent time recorded if socket ready.
         recPacket, addr = mySocket.recvfrom(1024)
 
         # Fill in start
@@ -53,20 +56,21 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
         # In IP datagram, IP is first 20 bytes, ICMP is 8 bytes after.
         ICMP_Header = recPacket[20:28]
         # Unpacking the header, format string "bbHHh" specifies how unpacked values are assigned to variables.
-        # struct.unpack- unpacks binary string to tuple values. 
+        # struct.unpack- unpacks binary string to tuple values.
         # Takes first argument a format string that specifies data type/byte order and 2nd argument is a packed binary string to be unpacked.
         Req_Type, Code, CheckSum, ID_Num, Seq_Num = struct.unpack("bbHHh", ICMP_Header)
 
         if ID_Num == ID:
-            SizeInDouble = struct.calcsize("d") # Calculating size of packed double precision floating pt. no.
-            Extract_Timestamp = recPacket[28:28 +SizeInDouble] # Timestamp value follows ICMP header, starts at 28 up to "d" calculated in Line 61.If d = 8, extracted from [28:36]
-            TimestampInPayload,  = struct.unpack("d", Extract_Timestamp) # struct.unpack returns tuple, retrieving only first value. 
+            SizeInDouble = struct.calcsize("d")  # Calculating size of packed double precision floating pt. no.
+            Extract_Timestamp = recPacket[28:28 + SizeInDouble]  # Timestamp value follows ICMP header, starts at 28 up to "d" calculated in Line 61.If d = 8, extracted from [28:36]
+            TimestampInPayload, = struct.unpack("d", Extract_Timestamp)  # struct.unpack returns tuple, retrieving only first value.
             RTT = timeReceived - TimestampInPayload
             return RTT
         # Fill in end
         timeLeft = timeLeft - howLongInSelect
         if timeLeft <= 0:
             return "Request timed out."
+
 
 def sendOnePing(mySocket, destAddr, ID):
     # Header is type (8), code (8), checksum (16), id (16), sequence (16)
@@ -94,11 +98,12 @@ def sendOnePing(mySocket, destAddr, ID):
     header = struct.pack("bbHHh", ICMP_ECHO_REQUEST, 0, myChecksum, ID, 1)
     packet = header + data
 
-    #Sending ICMP pkt to specified Addrs.
+    # Sending ICMP pkt to specified Addrs.
     mySocket.sendto(packet, (destAddr, 1))  # AF_INET address must be tuple, not str
 
     # Both LISTS and TUPLES consist of a number of objects
     # which can be referenced by their position number within the object.
+
 
 def doOnePing(destAddr, timeout):
     icmp = getprotobyname("icmp")
@@ -112,40 +117,51 @@ def doOnePing(destAddr, timeout):
     mySocket.close()
     return delay
 
+
 def ping(host, timeout=1):
-    # timeout=1 means: If one second goes by without a reply from the server,   
+    # timeout=1 means: If one second goes by without a reply from the server,
     # the client assumes that either the client's ping or the server's pong is lost
     dest = gethostbyname(host)
     print("\nPinging " + dest + " using Python:")
     print("")
-    
-    response = pd.DataFrame(columns=['bytes','rtt','ttl']) #This creates an empty dataframe with 3 headers with the column specific names declared
-    
-    #Send ping requests to a server separated by approximately one second
-    #Add something here to collect the delays of each ping in a list so you can calculate vars after your ping
-    
-    for i in range(0,4): #Four pings will be sent (loop runs for i=0, 1, 2, 3)
-        delay, statistics = doOnePing(dest, timeout) #what is stored into delay and statistics?
-        response = #store your bytes, rtt, and ttle here in your response pandas dataframe. An example is commented out below for vars
-        print(delay) 
+
+    response = pd.DataFrame(columns=['bytes', 'rtt', 'ttl'])  # This creates an empty dataframe with 3 headers with the column specific names declared
+
+    # Send ping requests to a server separated by approximately one second
+    # Add something here to collect the delays of each ping in a list so you can calculate vars after your ping
+    delays = []
+    for i in range(0, 4):  # Four pings will be sent (loop runs for i=0, 1, 2, 3)
+        delay, statistics = doOnePing(dest, timeout)  # what is stored into delay and statistics?
+        response =  response.append({'bytes': len(statistics), 'rtt': delay, 'ttl': statistics[2]}, ignore_index=True)# store your bytes, rtt, and ttle here in your response pandas dataframe. An example is commented out below for vars
+        print(delay)
         time.sleep(1)  # wait one second
-    
+
     packet_lost = 0
     packet_recv = 0
-    #fill in start. UPDATE THE QUESTION MARKS
-    for index, row in response.iterrows():
-        if ???? == 0: #access your response df to determine if you received a packet or not
-            packet_lost = #????
+    # fill in start. UPDATE THE QUESTION MARKS
+    for index, row in response.iterrows(): # Looping through each row in response df
+        if row[0] == 0:  # access your response df to determine if you received a packet or not
+            packet_lost += 1
         else:
-            packet_recv = #????
-    #fill in end
+            packet_recv += 1
+    # fill in end
 
-    #You should have the values of delay for each ping here structured in a pandas dataframe; 
-    #fill in calculation for packet_min, packet_avg, packet_max, and stdev
+    # You should have the values of delay for each ping here structured in a pandas dataframe;
+    # fill in calculation for packet_min, packet_avg, packet_max, and stdev
+    packet_min = min(delays)
+    packet_avg = sum(delays)/4
+    packet_max = max(delays)
+    stddev = round(statistics.stdev(delays))
     vars = pd.DataFrame(columns=['min', 'avg', 'max', 'stddev'])
-    vars = vars.append({'min':str(round(response['rtt'].min(), 2)), 'avg':str(round(response['rtt'].mean(), 2)),'max':str(round(response['rtt'].max(), 2)), 'stddev':str(round(response['rtt'].std(),2))}, ignore_index=True)
-    print (vars) #make sure your vars data you are returning resembles acceptance criteria
+    # vars = vars.append({'min': str(round(response['rtt'].min(), 2)), 'avg': str(round(response['rtt'].mean(), 2)),
+                       # 'max': str(round(response['rtt'].max(), 2)), 'stddev': str(round(response['rtt'].std(), 2))},
+                     #  ignore_index=True)
+    vars = vars.append({'min': str(round(packet_min, 2)), 'avg': str(round(packet_avg, 2)),
+                        'max': str(round(packet_max, 2)), 'stddev': str(round(stddev, 2))},
+                       ignore_index=True)
+    print(vars)  # make sure your vars data you are returning resembles acceptance criteria
     return vars
+
 
 if __name__ == '__main__':
     ping("google.com")
