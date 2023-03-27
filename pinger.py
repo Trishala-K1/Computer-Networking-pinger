@@ -60,12 +60,17 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
         # Takes first argument a format string that specifies data type/byte order and 2nd argument is a packed binary string to be unpacked.
         Req_Type, Code, CheckSum, ID_Num, Seq_Num = struct.unpack("bbHHh", ICMP_Header)
 
-        if ID_Num == ID:
+        if Req_Type != 8 and ID_Num == ID:
             SizeInDouble = struct.calcsize("d")  # Calculating size of packed double precision floating pt. no.
             Extract_Timestamp = (recPacket[28:28 + SizeInDouble])  # Timestamp value follows ICMP header, starts at 28 up to "d" calculated in Line 61.If d = 8, extracted from [28:36]
             TimestampInPayload = struct.unpack("d", Extract_Timestamp)[0]  # struct.unpack returns tuple, retrieving only first value.
             RTT = timeReceived - TimestampInPayload
-            return RTT
+            bytes = len(recPacket)
+            ttl = str(recPacket[8:8])
+            remaining = (RTT*1000, bytes, ttl)
+            return( RTT * 1000, remaining)
+        else:
+            return ['0', '0.0', '0', '0.0']
         # Fill in end
         timeLeft = timeLeft - howLongInSelect
         if timeLeft <= 0:
@@ -129,36 +134,49 @@ def ping(host, timeout=1):
 
     # Send ping requests to a server separated by approximately one second
     # Add something here to collect the delays of each ping in a list, so you can calculate vars after your ping
-    delays = []
+    #print(response)
+    #delays = []
     for i in range(0, 4):  # Four pings will be sent (loop runs for i=0, 1, 2, 3)
         delay, statistics = doOnePing(dest, timeout)  # what is stored into delay and statistics?
-        response = response.append({'bytes' : statistics[0], 'rtt': statistics[1], 'ttl': statistics[2]}, ignore_index=True)# store your bytes, rtt, and ttle here in your response pandas dataframe. An example is commented out below for vars
-        print(delay)
+        #print("Reply from: " + dest + " time: " + str(round(delay, 2) ) + " ms")
+        #delays.append(delay)
+        response = response.append({'bytes': statistics[0], 'rtt': delay, 'ttl': statistics[1]},
+                                   ignore_index=True)# store your bytes, rtt, and ttle here in your response pandas dataframe. An example is commented out below for vars
+        #print(response)
+        #print(delay)
+        #print(statistics)
+
+        print("Reply from: " + dest + " bytes: " + str(round(statistics[0], 2)) + " time: " + str(
+            round(delay, 7)) + " ms" + " TTL: " + str(round(statistics[0], None)))
         time.sleep(1)  # wait one second
 
     packet_lost = 0
     packet_recv = 0
+
     # fill in start. UPDATE THE QUESTION MARKS
     for index, row in response.iterrows(): # Looping through each row in response df
-        if row['bytes'] == 0:  # access your response df to determine if you received a packet or not
+        if statistics[0] == 0:  # access your response df to determine if you received a packet or not
             packet_lost += 1
         else:
             packet_recv += 1
-    # fill in end
+    print("--- google.com ping statistics --- ")
 
+    print( "4 packets transmitted," + str(packet_recv) + " packets received, " + str((packet_lost/4)*100) + "% packet loss")
+
+    # fill in end
+    # print(delays)
     # You should have the values of delay for each ping here structured in a pandas dataframe;
     # fill in calculation for packet_min, packet_avg, packet_max, and stdev
-    packet_min = min(delays)
-    packet_avg = sum(delays)/4
-    packet_max = max(delays)
-    stddev = statistics.stdev(delays)
+    #packet_min = min(delays)
+    #packet_avg = sum(delays)/4
+    #packet_max = max(delays)
+    #stddev = statistics.stdev(delays)
     vars = pd.DataFrame(columns=['min', 'avg', 'max', 'stddev'])
-    # vars = vars.append({'min': str(round(response['rtt'].min(), 2)), 'avg': str(round(response['rtt'].mean(), 2)),
-                       # 'max': str(round(response['rtt'].max(), 2)), 'stddev': str(round(response['rtt'].std(), 2))},
-                     #  ignore_index=True)
-    vars = vars.append({'min': str(round(packet_min, 2)), 'avg': str(round(packet_avg, 2)),
-                        'max': str(round(packet_max, 2)), 'stddev': str(round(stddev, 2))},
-                       ignore_index=True)
+    vars = vars.append({'min': str(round(response['rtt'].min(), 2)), 'avg': str(round(response['rtt'].mean(), 2)),
+                       'max': str(round(response['rtt'].max(), 2)), 'stddev': str(round(response['rtt'].std(), 2))}, ignore_index=True)
+    #vars = vars.append({'min': str(round(packet_min, 2)), 'avg': str(round(packet_avg, 2)),
+                        #'max': str(round(packet_max, 2)), 'stddev': str(round(stddev, 2))},
+                       #ignore_index=True)
     print(vars)  # make sure your vars data you are returning resembles acceptance criteria
     return vars
 
