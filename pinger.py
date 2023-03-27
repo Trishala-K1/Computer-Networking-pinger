@@ -68,7 +68,7 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
             bytes = len(recPacket)
             ttl = str(recPacket[8:8])
             remaining = (RTT*1000, bytes, ttl)
-            return( RTT * 1000, remaining)
+            return(remaining)
         else:
             return ['0', '0.0', '0', '0.0']
         # Fill in end
